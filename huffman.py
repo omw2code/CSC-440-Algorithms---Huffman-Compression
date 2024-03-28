@@ -27,9 +27,26 @@ def encode(message: bytes) -> Tuple[str, Dict]:
 
     #sort the bytes
     sorted_freq = sorted(freq.items(), key=lambda kv: kv[1])
+
+    #Invariant: A list of tuples where each tuple represents a node in the Huffman tree. 
+    #           The tuples contain either a single byte with its frequency, or a tuple representing 
+    #           an internal node with its children, the combined frequency of the children, and the 
+    #           depth of the node in the tree.
+    #Initialization: At the beginning of the function, sorted_freq is initialized as an empty list.
+    #Maintenance: After processing each pair of least frequent nodes and combining them into a new internal 
+    #             node, the list sorted_freq is updated with the new internal node.
     sorted_freq = [(x, xf, 0) for (x, xf) in sorted_freq]
 
-    #while the frequency dict is greater than one
+    #Invariant: Invariant: During each iteration of the while loop, sorted_freq maintains a list of tuples where 
+    #           each tuple represents a node in the Huffman tree. The tuples contain either a single byte with its 
+    #           frequency, or a tuple representing an internal node with its children, the combined frequency of the 
+    #           children, and the depth of the node in the tree. The list is sorted based on the frequencies in ascending order.
+    #Maintenance: Maintenance: After processing each pair of least frequent nodes and combining them into a new internal 
+    #             node, the list sorted_freq is updated with the new internal node. The list is then sorted again based 
+    #             on frequencies. This process continues until there is only one node left in sorted_freq, representing 
+    #             the root of the Huffman tree.
+    #Termination: Termination: The loop terminates when there is only one node left in sorted_freq, which represents 
+    #             the root of the Huffman tree and indicates the completion of the encoding process.
     while len(sorted_freq) > 1:
 
         #Take the two least frequent trees (x, y)
@@ -41,7 +58,7 @@ def encode(message: bytes) -> Tuple[str, Dict]:
         #create a tuple
         tup = ((left, right), left[1] + right[1], 1 + max(left[2], right[2]))
 
-        #Insert that tree into the ans forest
+        #Insert that tree into the forest
         sorted_freq.append(tup)
         sorted(sorted_freq, key=lambda kv: kv[1])
 
@@ -58,7 +75,7 @@ def encode(message: bytes) -> Tuple[str, Dict]:
     return (encoded_message, encoding_dict)
 
 def helper(encoding_dict, tree: Tuple[Dict], character, msg):
-    # if leaf do something and return
+    #if leaf do something and return
     if tree[2] == 0:
         if tree[0] == character:
             encoding_dict[character] = msg
@@ -83,10 +100,10 @@ def decode(message: str, decoder_ring: Dict) -> bytes:
     
     for bit in message:
         current_code += bit
-        # Check if the current code is in the decoder ring
-        if current_code in decoder_ring.keys():
+        #check if the current code is in the decoder ring
+        if current_code in decoder_ring:
             decoded_message.append(decoder_ring[current_code])
-            current_code = ""  # Reset the current code
+            current_code = ""
     
     decoded_bytes = bytes(decoded_message)
     return decoded_bytes
@@ -101,8 +118,7 @@ def compress(message: bytes) -> Tuple[array, Dict]:
               dict containing the decoder ring
     """
     _message, _decoder_ring = encode(message)
-    
-    # Initialize variables for byte manipulation
+
     current_byte = 0
     bit_count = 0
     encoded_bytes = array('B')
@@ -120,9 +136,12 @@ def compress(message: bytes) -> Tuple[array, Dict]:
             bit_count = 0
     
     #if remaining bits pad with zeros and add the byte
+    _decoder_ring["padding_len"] = 0
     if bit_count > 0:
         current_byte <<= (8 - bit_count)
         encoded_bytes.append(current_byte)
+        _decoder_ring["padding_len"] = 8 - bit_count
+
     
     return (encoded_bytes, _decoder_ring)
 
@@ -137,8 +156,8 @@ def decompress(message: array, decoder_ring: Dict) -> bytes:
     #convert array of bytes back into a binary string
     binary_str = ''.join(format(byte, '08b') for byte in message)
     
-    #trim binary string to its original length
-    binary_str = binary_str.rstrip('0')
+    #triming binary string to its original length
+    binary_str = binary_str[:(len(binary_str) - decoder_ring["padding_len"])]
     
     return decode(binary_str, decoder_ring)
 
